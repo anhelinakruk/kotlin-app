@@ -10,5 +10,6 @@ data class Reminder(
     val id: Int = 0,
     val title: String,
     val createdAt: Date,
-    val reminderTime: Date? = null
+    val reminderTime: Date? = null,
+    val isActive: Boolean = true
 )

@@ -1,5 +1,6 @@
 package com.example.dsw53518_kotlin.view
 
+import com.example.dsw53518_kotlin.viewmodel.ReminderViewModel
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.foundation.background
@@ -27,10 +28,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.dsw53518_kotlin.R
+import com.example.dsw53518_kotlin.model.Reminder
 import com.example.dsw53518_kotlin.ui.theme.DarkPurple
 import com.example.dsw53518_kotlin.ui.theme.Pink
-import com.example.dsw53518_kotlin.viewmodel.ReminderViewModel
-import com.example.dsw53518_kotlin.model.Reminder
 import com.example.dsw53518_kotlin.utils.Routes
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -41,8 +41,13 @@ fun RemindersPage(viewModel: ReminderViewModel, navController: NavController) {
     val reminderList by viewModel.reminderList.observeAsState()
     val context = LocalContext.current
 
+    LaunchedEffect(Unit) {
+        viewModel.refreshReminders()
+    }
+
     var inputText by remember { mutableStateOf("") }
     var reminderDateTime by remember { mutableStateOf<Long?>(null) }
+    var showTimeError by remember { mutableStateOf(false) }
 
     val calendar = remember { Calendar.getInstance() }
 
@@ -53,6 +58,7 @@ fun RemindersPage(viewModel: ReminderViewModel, navController: NavController) {
             calendar.set(Calendar.MINUTE, minute)
             calendar.set(Calendar.SECOND, 0)
             reminderDateTime = calendar.timeInMillis
+            showTimeError = false
         },
         calendar.get(Calendar.HOUR_OF_DAY),
         calendar.get(Calendar.MINUTE),
@@ -68,7 +74,9 @@ fun RemindersPage(viewModel: ReminderViewModel, navController: NavController) {
         calendar.get(Calendar.YEAR),
         calendar.get(Calendar.MONTH),
         calendar.get(Calendar.DAY_OF_MONTH)
-    )
+    ).apply {
+        datePicker.minDate = System.currentTimeMillis()
+    }
 
     fun formatReminderDateTime(timestamp: Long?): String {
         return if (timestamp == null) {
@@ -77,6 +85,8 @@ fun RemindersPage(viewModel: ReminderViewModel, navController: NavController) {
             SimpleDateFormat("hh:mm aa, dd/MM/yyyy", Locale.ENGLISH).format(timestamp)
         }
     }
+
+    val isDateTimeInFuture = reminderDateTime?.let { it > System.currentTimeMillis() } ?: false
 
     Column(
         modifier = Modifier
@@ -143,16 +153,20 @@ fun RemindersPage(viewModel: ReminderViewModel, navController: NavController) {
             }
             Button(
                 onClick = {
-                    if (inputText.isNotBlank() && reminderDateTime != null) {
-                        viewModel.addReminder(inputText.trim(), reminderDateTime!!)
+                    if (inputText.isNotBlank() && reminderDateTime != null && isDateTimeInFuture) {
+                        viewModel.addReminderWithAlarm(context, inputText.trim(), reminderDateTime!!)
                         inputText = ""
                         reminderDateTime = null
+                        showTimeError = false
+                    } else if (!isDateTimeInFuture) {
+                        showTimeError = true
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = DarkPurple),
                 modifier = Modifier
                     .weight(1f)
-                    .height(64.dp)
+                    .height(64.dp),
+                enabled = inputText.isNotBlank() && reminderDateTime != null && isDateTimeInFuture
             ) {
                 Text(
                     text = "Add",
@@ -161,6 +175,14 @@ fun RemindersPage(viewModel: ReminderViewModel, navController: NavController) {
                     fontSize = 16.sp
                 )
             }
+        }
+        if (showTimeError) {
+            Text(
+                text = "Please select a future date and time!",
+                color = Color.Red,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -188,18 +210,28 @@ fun RemindersPage(viewModel: ReminderViewModel, navController: NavController) {
 
 @Composable
 fun ReminderItem(item: Reminder, onDelete: () -> Unit) {
+    val backgroundColor = if (item.isActive) {
+        Pink.copy(alpha = 0.15f)
+    } else {
+        Color.Gray.copy(alpha = 0.15f)
+    }
+    val textColor = if (item.isActive) {
+        DarkPurple
+    } else {
+        Color.Gray
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Pink.copy(alpha = 0.15f))
+            .background(backgroundColor)
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             painter = painterResource(id = R.drawable.reminder_icon),
             contentDescription = "Reminder Icon",
-            tint = DarkPurple,
+            tint = textColor,
             modifier = Modifier.size(36.dp)
         )
         Spacer(modifier = Modifier.width(16.dp))
@@ -209,21 +241,21 @@ fun ReminderItem(item: Reminder, onDelete: () -> Unit) {
             Text(
                 text = SimpleDateFormat("hh:mm aa, dd/MM/yyyy", Locale.ENGLISH).format(item.reminderTime ?: item.createdAt),
                 fontSize = 12.sp,
-                color = DarkPurple.copy(alpha = 0.7f)
+                color = textColor.copy(alpha = 0.7f)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = item.title,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = DarkPurple
+                color = textColor
             )
         }
         IconButton(onClick = onDelete) {
             Icon(
                 painter = painterResource(id = R.drawable.baseline_delete_24),
                 contentDescription = "Delete reminder",
-                tint = Pink
+                tint = if (item.isActive) Pink else Color.Gray
             )
         }
     }

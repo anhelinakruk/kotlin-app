@@ -15,7 +15,7 @@ fun CustomPasswordField(
     onPasswordChange: (String) -> Unit,
     onTrailingIconClick: () -> Unit,
     hidePassword: Boolean,
-    modifier: Modifier = Modifier,       // dodajemy modifier jako parametr z wartością domyślną
+    modifier: Modifier = Modifier
 ) {
     val trailingIcon =
         if (hidePassword) painterResource(R.drawable.eye)
@@ -26,7 +26,7 @@ fun CustomPasswordField(
         else VisualTransformation.None
 
     CustomTextField(
-        modifier = modifier.fillMaxWidth(),   // używamy przekazanego modifiera i dodajemy fillMaxWidth
+        modifier = modifier.fillMaxWidth(),
         value = password,
         onValueChange = onPasswordChange,
         leadingIcon = painterResource(R.drawable.lock_icon),

@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.dsw53518_kotlin.model.Reminder
 
-@Database(entities = [Reminder::class], version = 2, exportSchema = false)
+@Database(entities = [Reminder::class], version = 3, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class ReminderDatabase : RoomDatabase() {
     companion object {
